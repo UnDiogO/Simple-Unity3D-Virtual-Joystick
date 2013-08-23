@@ -16,7 +16,7 @@ public class ChangeColorTest : MonoBehaviour {
 			magnitude * rgba[0], 
 			magnitude * rgba[1], 
 			magnitude * rgba[2], 
-			magnitude * rgba[3]
+			1f - magnitude * rgba[3]
 		));
 	}
 }

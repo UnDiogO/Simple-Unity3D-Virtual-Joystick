@@ -6,32 +6,23 @@ public class JoyInput {
 	public Vector2 axis;
 	public bool[] buttons;
 	
-	public JoyInput (int buttonLength) {
+	public JoyInput (int buttonsLength) {
 		axis = Vector2.zero;
-		buttons = new bool[buttonLength];
-		for (int index = 0; index < buttonLength; index++) {
-			buttons[index] = false;
-		}
+		buttons = new bool[buttonsLength];
 	}
 };
 
 public class VirtualJoystick : MonoBehaviour {
 	
 	private class TouchWritable {
-		public Vector2 deltaPosition;
-		public float deltaTime;
 		public int fingerId = -1;
 		public TouchPhase phase = TouchPhase.Ended;
 		public Vector2 position;
-		public int tapCount;
 		
 		public void CopyFrom (Touch reference) {
-			this.deltaPosition = reference.deltaPosition;
-			this.deltaTime = reference.deltaTime;
 			this.fingerId = reference.fingerId;
 			this.phase = reference.phase;
 			this.position = reference.position;
-			this.tapCount = reference.tapCount;
 		}
 	};
 	
@@ -40,18 +31,21 @@ public class VirtualJoystick : MonoBehaviour {
 	public float speed = 5f;
 	public bool useButton = true;
 	public bool useDebug = true;
+	
 	public Texture2D graphicAxisArea;
 	public Texture2D graphicAxisCursor;
 	public Texture2D[] graphicButtons;
 	
-	private TouchWritable axisTouch;
 	private Rect axisLocation;
 	private Rect cursorLocation;
 	private Rect[] btLocations;	
+	
 	private Vector2 center;
 	private Vector2 axis;
 	private Vector2 location;
 	private Vector2 direction;
+	
+	private TouchWritable axisTouch = null;
 	private static JoyInput input = null;
 	
 	public void Awake () {
@@ -89,43 +83,37 @@ public class VirtualJoystick : MonoBehaviour {
 	
 	public void Update () {
 		ResetButtons(input);
-		if (Input.touchCount > 0) {
-			for (int index = 0; index < Input.touchCount; index++) {
-				Touch touch = Input.GetTouch(index);
-				Vector2 pos = touch.position;
-				pos.y = Screen.height - pos.y;
-				if (touch.position.x < Screen.width / 2) {
-					if (touch.phase == TouchPhase.Began && axisLocation.Contains(pos))
-						axisTouch.CopyFrom (touch);
-					if (touch.fingerId == axisTouch.fingerId) {
-						axisTouch.CopyFrom (touch);
-					}
-				} else {
-					if (touch.fingerId == axisTouch.fingerId) {
-						axisTouch.phase = TouchPhase.Ended;
-						axisTouch.fingerId = -1;
-					}
-					if (useButton) {
-						for (int i = 0; i < btLocations.Length; i++) {
-							if (btLocations[i].Contains(pos)) {
-								input.buttons[i] = touch.phase != TouchPhase.Ended && touch.phase != TouchPhase.Canceled;
-							}
+		for (int index = 0; index < Input.touchCount; index++) {
+			Touch touch = Input.GetTouch(index);
+			Vector2 pos = touch.position;
+			pos.y = Screen.height - pos.y;
+			if (touch.position.x < Screen.width / 2) {
+				if (touch.phase == TouchPhase.Began && axisLocation.Contains(pos))
+					axisTouch.CopyFrom (touch);
+				if (touch.fingerId == axisTouch.fingerId) {
+					axisTouch.CopyFrom (touch);
+				}
+			} else {
+				if (touch.fingerId == axisTouch.fingerId) {
+					axisTouch.phase = TouchPhase.Ended;
+					axisTouch.fingerId = -1;
+				}
+				if (useButton) {
+					for (int i = 0; i < btLocations.Length; i++) {
+						if (btLocations[i].Contains(pos)) {
+							input.buttons[i] = touch.phase != TouchPhase.Ended && touch.phase != TouchPhase.Canceled;
 						}
 					}
 				}
 			}
 		}
-		if (Input.touchCount > 0) {
-			if (axisTouch.phase == TouchPhase.Moved || axisTouch.phase == TouchPhase.Stationary) {
-				location = axisTouch.position;
-				location.y = Screen.height - location.y;
-			} else if (axisTouch.phase != TouchPhase.Began) {
-				axisTouch.fingerId = -1;
-				location = Vector2.Lerp(location, center, Time.deltaTime * speed);
-			}
-		} else {
+		if (Input.touchCount == 0 || axisTouch.phase == TouchPhase.Ended || axisTouch.phase == TouchPhase.Canceled) {
 			axisTouch.fingerId = -1;
 			location = Vector2.Lerp(location, center, Time.deltaTime * speed);
+		}
+		if (axisTouch.phase == TouchPhase.Moved || axisTouch.phase == TouchPhase.Stationary) {
+			location = axisTouch.position;
+			location.y = Screen.height - location.y;
 		}
 		direction = location - center;
 		direction.x = Mathf.Clamp(direction.x, -radius, radius);
@@ -138,7 +126,6 @@ public class VirtualJoystick : MonoBehaviour {
 	public void OnGUI () {
 		#if !UNITY_IOS && !UNITY_ANDROID
 			Rect warning = new Rect (Screen.width / 2 - 100, Screen.height / 2, 200, 20);
-			//GUI.DrawTexture(warning, graphicAxisArea);
 			GUI.Label (warning, "Use IOS Or Android Plataform !!!");
 		#endif
 		if (input != null && useDebug) {

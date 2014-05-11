@@ -13,9 +13,6 @@ public class ObjectJoystickRotate : MonoBehaviour {
 		joystick = VirtualJoystick.GetInput();
 	}
 	public void Update () {
-		Vector3 result = Vector3.zero;
-		result.x = joystick.axis.x;
-		result.y = joystick.axis.y;
-		self.localEulerAngles = result * maxRotation;
+		self.localEulerAngles = joystick.axis * maxRotation;
 	}
 }
